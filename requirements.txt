@@ -1,0 +1,5 @@
+streamlit
+alpha_vantage
+pandas
+yfinance
+scipy
