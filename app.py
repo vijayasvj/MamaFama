@@ -4,9 +4,6 @@ import yfinance as yf
 import plotly.graph_objs as go
 import scipy.optimize as opt
 
-# Disable the progress bar in yfinance
-yf.pdr_override()
-
 # Function to calculate MAMA and FAMA using TA-Lib
 def calculate_mama_fama(stock_data, fast_limit, slow_limit):
     import talib
