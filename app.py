@@ -193,7 +193,7 @@ if stock_symbol:
             st.error(f"Calculation error: {e}")
 
     re, ac = backtest_mama_fama(df, fast_limit, slow_limit)
-    st.subheader(f"Returns: {re:.2f}%")
+    st.subheader(f"Returns: {re - 100.00}%")
 
 # Section for Optimization and Walk-Forward Testing
 st.header("Optimization and Walk-Forward Testing")
@@ -240,7 +240,7 @@ if st.button("Optimize Parameters"):
 if st.session_state.optimal_params is not None:
     optimal_a, optimal_b = st.session_state.optimal_params
     st.write(f"Optimal Fast Limit: {optimal_a:.2f}, Optimal Slow Limit: {optimal_b:.2f}")
-    st.write(f"The profits we have got by buying and selling a single stock is: {st.session_state.returns:.2f}%")
+    st.write(f"The profits we have got by buying and selling a single stock is: {st.session_state.returns - 100.00}%")
     actions_df = pd.DataFrame({'Date': st.session_state.opt_df.index[:len(st.session_state.actions)], 'Action': st.session_state.actions})
     actions_csv = actions_df.to_csv(index=False)  # Convert the DataFrame to CSV format
     st.download_button(label="Download Optimized Actions CSV", data=actions_csv, file_name='optimized_actions.csv', mime='text/csv')
@@ -272,7 +272,7 @@ if st.session_state.optimal_params is not None:
                 optimal_a2 = float(f"{optimal_a:.2f}")
                 optimal_b2 = float(f"{optimal_b:.2f}")
                 wf_return, wf_actions = backtest_mama_fama(wf_df, optimal_a2, optimal_b2)
-                st.write(f"Walk-Forward Testing Return: {wf_return:.2f}%")
+                st.write(f"Walk-Forward Testing Return: {wf_return - 100.00}%")
 
                 # Display actions taken during walk-forward testing
                 st.write("Actions taken during Walk-Forward Testing:")
