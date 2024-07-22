@@ -4,4 +4,5 @@ pandas
 yfinance
 scipy
 plotly
-ta-lib
+numpy
+TA-Lib
