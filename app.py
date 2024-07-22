@@ -1,3 +1,7 @@
+import os
+import sys
+sys.path.append('/usr/local/lib/python3.9/site-packages')
+
 import streamlit as st
 import pandas as pd
 import yfinance as yf

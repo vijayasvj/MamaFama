@@ -1,6 +1,9 @@
 [server]
 headless = true
 
+[commands]
+before_run = "bash setup.sh"
+
 [runner]
 magicEnabled = false
 installTracer = false
