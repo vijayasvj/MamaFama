@@ -4,6 +4,9 @@ import yfinance as yf
 import plotly.graph_objs as go
 import scipy.optimize as opt
 
+# Disable the progress bar in yfinance
+yf.pdr_override()
+
 # Function to calculate MAMA and FAMA using TA-Lib
 def calculate_mama_fama(stock_data, fast_limit, slow_limit):
     import talib
@@ -162,7 +165,7 @@ with col5:
 
 # Fetch historical data
 if stock_symbol:
-    df = yf.download(stock_symbol, start=start_date, end=end_date)
+    df = yf.download(stock_symbol, start=start_date, end=end_date, progress=False)
     if not df.empty:
         df['Close'] = df['Adj Close']
         # Calculate MAMA and FAMA using the given limits
@@ -217,7 +220,7 @@ if 'optimal_params' not in st.session_state:
 
 if st.button("Optimize Parameters"):
     # Filter data for the optimization date range
-    opt_df = yf.download(stock_symbol, start=opt_start_date, end=opt_end_date)
+    opt_df = yf.download(stock_symbol, start=opt_start_date, end=opt_end_date, progress=False)
     if not opt_df.empty:
         opt_df['Close'] = opt_df['Adj Close']
     if not opt_df.empty:
@@ -264,7 +267,7 @@ if st.session_state.optimal_params is not None:
     
     # Button to perform walk-forward testing
     if st.button("Perform Walk-Forward Testing"):
-        wf_df = yf.download(stock_symbol, start=pd.to_datetime(wf_start_date), end=pd.to_datetime(wf_end_date))
+        wf_df = yf.download(stock_symbol, start=pd.to_datetime(wf_start_date), end=pd.to_datetime(wf_end_date), progress=False)
         if not wf_df.empty:
             wf_df['Close'] = wf_df['Adj Close']
             # Calculate MAMA and FAMA using the given limits
