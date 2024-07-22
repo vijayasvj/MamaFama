@@ -1,8 +1,7 @@
 streamlit
-alpha_vantage
-pandas
 yfinance
-scipy
 plotly
 numpy
-TA-Lib
+scipy
+pandas
+ta-lib
