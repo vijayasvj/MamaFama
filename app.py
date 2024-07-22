@@ -34,6 +34,9 @@ def backtest_mama_fama(df, fast_limit, slow_limit):
 
         # Loop through the data to simulate trading based on MAMA and FAMA values
         for i in range(1, len(df) - 1):
+            if i >= len(df) or i < 1:
+                st.warning(f"Skipping index {i} out of bounds")
+                continue
             if df['MAMA'].iloc[i] > df['FAMA'].iloc[i] and df['MAMA'].iloc[i - 1] <= df['FAMA'].iloc[i - 1]:
                 # Buy signal
                 if not holding:
@@ -162,38 +165,41 @@ with col5:
 
 # Fetch historical data
 if stock_symbol:
-    df = yf.download(stock_symbol, start=start_date, end=end_date, progress=False)
-    if not df.empty:
-        df['Close'] = df['Adj Close']
-        # Calculate MAMA and FAMA using the given limits
-        try:
-            df['MAMA'], df['FAMA'] = calculate_mama_fama(df['Close'].values, fast_limit, slow_limit)
-            
-            # Plotting with Plotly
-            st.subheader("Stock Price with MAMA and FAMA")
-            fig = go.Figure()
-            # Add trace for closing price
-            fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Close Price', line=dict(color='#0073e6')))
-            # Add trace for MAMA
-            fig.add_trace(go.Scatter(x=df.index, y=df['MAMA'], mode='lines', name='MAMA', line=dict(color='#FF6347')))
-            # Add trace for FAMA
-            fig.add_trace(go.Scatter(x=df.index, y=df['FAMA'], mode='lines', name='FAMA', line=dict(color='#4682B4')))
-            fig.update_layout(
-                title=dict(text=f"{stock_symbol} Stock Price with MAMA and FAMA", font=dict(color='white')),
-                xaxis_title=dict(text='Date', font=dict(color='white')),
-                yaxis_title=dict(text='Price', font=dict(color='white')),
-                xaxis=dict(tickfont=dict(color='white')),
-                yaxis=dict(tickfont=dict(color='white')),
-                plot_bgcolor='#1e1e1e', 
-                paper_bgcolor='#1e1e1e'
-            )
-            st.plotly_chart(fig, use_container_width=True)  # Display the plot
-            
-        except ValueError as e:
-            st.error(f"Calculation error: {e}")
+    try:
+        df = yf.download(stock_symbol, start=start_date, end=end_date)
+        if not df.empty:
+            df['Close'] = df['Adj Close']
+            # Calculate MAMA and FAMA using the given limits
+            try:
+                df['MAMA'], df['FAMA'] = calculate_mama_fama(df['Close'].values, fast_limit, slow_limit)
+                
+                # Plotting with Plotly
+                st.subheader("Stock Price with MAMA and FAMA")
+                fig = go.Figure()
+                # Add trace for closing price
+                fig.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Close Price', line=dict(color='#0073e6')))
+                # Add trace for MAMA
+                fig.add_trace(go.Scatter(x=df.index, y=df['MAMA'], mode='lines', name='MAMA', line=dict(color='#FF6347')))
+                # Add trace for FAMA
+                fig.add_trace(go.Scatter(x=df.index, y=df['FAMA'], mode='lines', name='FAMA', line=dict(color='#4682B4')))
+                fig.update_layout(
+                    title=dict(text=f"{stock_symbol} Stock Price with MAMA and FAMA", font=dict(color='white')),
+                    xaxis_title=dict(text='Date', font=dict(color='white')),
+                    yaxis_title=dict(text='Price', font=dict(color='white')),
+                    xaxis=dict(tickfont=dict(color='white')),
+                    yaxis=dict(tickfont=dict(color='white')),
+                    plot_bgcolor='#1e1e1e', 
+                    paper_bgcolor='#1e1e1e'
+                )
+                st.plotly_chart(fig, use_container_width=True)  # Display the plot
+                
+            except ValueError as e:
+                st.error(f"Calculation error: {e}")
 
-    re, ac = backtest_mama_fama(df, fast_limit, slow_limit)
-    st.subheader(f"Returns: {re - 100.00}%")
+        re, ac = backtest_mama_fama(df, fast_limit, slow_limit)
+        st.subheader(f"Returns: {re - 100.00}%")
+    except KeyError as e:
+        st.error(f"Error fetching data for {stock_symbol}: {e}")
 
 # Section for Optimization and Walk-Forward Testing
 st.header("Optimization and Walk-Forward Testing")
@@ -216,25 +222,28 @@ if 'optimal_params' not in st.session_state:
     st.session_state.actions = []
 
 if st.button("Optimize Parameters"):
-    # Filter data for the optimization date range
-    opt_df = yf.download(stock_symbol, start=opt_start_date, end=opt_end_date, progress=False)
-    if not opt_df.empty:
-        opt_df['Close'] = opt_df['Adj Close']
-    if not opt_df.empty:
-        st.session_state.opt_df = opt_df
-        # Bounds for a and b
-        bounds = [(0.01, 0.99), (0.01, 0.99)]
+    try:
+        # Filter data for the optimization date range
+        opt_df = yf.download(stock_symbol, start=opt_start_date, end=opt_end_date)
+        if not opt_df.empty:
+            opt_df['Close'] = opt_df['Adj Close']
+        if not opt_df.empty:
+            st.session_state.opt_df = opt_df
+            # Bounds for a and b
+            bounds = [(0.01, 0.99), (0.01, 0.99)]
 
-        # Use differential evolution to find the maximum
-        result = opt.differential_evolution(objective, bounds, args=(opt_df,), seed=0)
+            # Use differential evolution to find the maximum
+            result = opt.differential_evolution(objective, bounds, args=(opt_df,), seed=0)
 
-        # Extract the optimal parameters
-        st.session_state.optimal_params = result.x
+            # Extract the optimal parameters
+            st.session_state.optimal_params = result.x
 
-        # Perform backtesting with optimized parameters
-        st.session_state.returns, st.session_state.actions = backtest_mama_fama(opt_df, st.session_state.optimal_params[0], st.session_state.optimal_params[1])
-    else:
-        st.error("No data available for the selected optimization date range.")
+            # Perform backtesting with optimized parameters
+            st.session_state.returns, st.session_state.actions = backtest_mama_fama(opt_df, st.session_state.optimal_params[0], st.session_state.optimal_params[1])
+        else:
+            st.error("No data available for the selected optimization date range.")
+    except KeyError as e:
+        st.error(f"Error fetching data for optimization: {e}")
 
 # Walk-Forward Testing Section
 if st.session_state.optimal_params is not None:
@@ -264,67 +273,70 @@ if st.session_state.optimal_params is not None:
     
     # Button to perform walk-forward testing
     if st.button("Perform Walk-Forward Testing"):
-        wf_df = yf.download(stock_symbol, start=pd.to_datetime(wf_start_date), end=pd.to_datetime(wf_end_date), progress=False)
-        if not wf_df.empty:
-            wf_df['Close'] = wf_df['Adj Close']
-            # Calculate MAMA and FAMA using the given limits
-            try:
-                optimal_a2 = float(f"{optimal_a:.2f}")
-                optimal_b2 = float(f"{optimal_b:.2f}")
-                wf_return, wf_actions = backtest_mama_fama(wf_df, optimal_a2, optimal_b2)
-                st.write(f"Walk-Forward Testing Return: {wf_return - 100.00}%")
+        try:
+            wf_df = yf.download(stock_symbol, start=pd.to_datetime(wf_start_date), end=pd.to_datetime(wf_end_date))
+            if not wf_df.empty:
+                wf_df['Close'] = wf_df['Adj Close']
+                # Calculate MAMA and FAMA using the given limits
+                try:
+                    optimal_a2 = float(f"{optimal_a:.2f}")
+                    optimal_b2 = float(f"{optimal_b:.2f}")
+                    wf_return, wf_actions = backtest_mama_fama(wf_df, optimal_a2, optimal_b2)
+                    st.write(f"Walk-Forward Testing Return: {wf_return - 100.00}%")
 
-                # Display actions taken during walk-forward testing
-                st.write("Actions taken during Walk-Forward Testing:")
-                wf_actions_df = pd.DataFrame({'Date': wf_df.index[:len(wf_actions)], 'Action': wf_actions})
-                wf_actions_csv = wf_actions_df.to_csv(index=False)  # Convert the DataFrame to CSV format
-                st.download_button(label="Download Walk-Forward Actions CSV", data=wf_actions_csv, file_name='walkforward_actions.csv', mime='text/csv')
-                wf_df['MAMA'], wf_df['FAMA'] = calculate_mama_fama(wf_df['Close'].values, fast_limit, slow_limit)
-                # Separate columns for the graphs
-                st.subheader("Graphical Representation of Optimization and Walk-Forward Testing")
-                col12, col13 = st.columns(2)
+                    # Display actions taken during walk-forward testing
+                    st.write("Actions taken during Walk-Forward Testing:")
+                    wf_actions_df = pd.DataFrame({'Date': wf_df.index[:len(wf_actions)], 'Action': wf_actions})
+                    wf_actions_csv = wf_actions_df.to_csv(index=False)  # Convert the DataFrame to CSV format
+                    st.download_button(label="Download Walk-Forward Actions CSV", data=wf_actions_csv, file_name='walkforward_actions.csv', mime='text/csv')
+                    wf_df['MAMA'], wf_df['FAMA'] = calculate_mama_fama(wf_df['Close'].values, fast_limit, slow_limit)
+                    # Separate columns for the graphs
+                    st.subheader("Graphical Representation of Optimization and Walk-Forward Testing")
+                    col12, col13 = st.columns(2)
 
-                with col12:
-                    st.write("Optimization Timeframe")
-                    fig_opt = go.Figure()
-                    # Add trace for optimization phase closing price
-                    fig_opt.add_trace(go.Scatter(x=st.session_state.opt_df.index, y=st.session_state.opt_df['Close'], mode='lines', name='Optimization Close Price', line=dict(color='#0073e6')))
-                    # Add trace for MAMA
-                    fig_opt.add_trace(go.Scatter(x=st.session_state.opt_df.index, y=st.session_state.opt_df['MAMA'], mode='lines', name='MAMA', line=dict(color='#FF6347')))
-                    # Add trace for FAMA
-                    fig_opt.add_trace(go.Scatter(x=st.session_state.opt_df.index, y=st.session_state.opt_df['FAMA'], mode='lines', name='FAMA', line=dict(color='#4682B4')))
-                    fig_opt.update_layout(
-                        title=dict(text=f"{stock_symbol} Optimization Timeframe", font=dict(color='white')),
-                        xaxis_title=dict(text='Date', font=dict(color='white')),
-                        yaxis_title=dict(text='Price', font=dict(color='white')),
-                        xaxis=dict(tickfont=dict(color='white')),
-                        yaxis=dict(tickfont=dict(color='white')),
-                        plot_bgcolor='#1e1e1e', 
-                        paper_bgcolor='#1e1e1e'
-                    )
-                    st.plotly_chart(fig_opt, use_container_width=True)
+                    with col12:
+                        st.write("Optimization Timeframe")
+                        fig_opt = go.Figure()
+                        # Add trace for optimization phase closing price
+                        fig_opt.add_trace(go.Scatter(x=st.session_state.opt_df.index, y=st.session_state.opt_df['Close'], mode='lines', name='Optimization Close Price', line=dict(color='#0073e6')))
+                        # Add trace for MAMA
+                        fig_opt.add_trace(go.Scatter(x=st.session_state.opt_df.index, y=st.session_state.opt_df['MAMA'], mode='lines', name='MAMA', line=dict(color='#FF6347')))
+                        # Add trace for FAMA
+                        fig_opt.add_trace(go.Scatter(x=st.session_state.opt_df.index, y=st.session_state.opt_df['FAMA'], mode='lines', name='FAMA', line=dict(color='#4682B4')))
+                        fig_opt.update_layout(
+                            title=dict(text=f"{stock_symbol} Optimization Timeframe", font=dict(color='white')),
+                            xaxis_title=dict(text='Date', font=dict(color='white')),
+                            yaxis_title=dict(text='Price', font=dict(color='white')),
+                            xaxis=dict(tickfont=dict(color='white')),
+                            yaxis=dict(tickfont=dict(color='white')),
+                            plot_bgcolor='#1e1e1e', 
+                            paper_bgcolor='#1e1e1e'
+                        )
+                        st.plotly_chart(fig_opt, use_container_width=True)
 
-                with col13:
-                    st.write("Walk-Forward Testing Timeframe")
-                    fig_wf = go.Figure()
-                    # Add trace for walk-forward phase closing price
-                    fig_wf.add_trace(go.Scatter(x=wf_df.index, y=wf_df['Close'], mode='lines', name='Walk-Forward Close Price', line=dict(color='#FF7F50')))
-                    # Add trace for MAMA
-                    fig_wf.add_trace(go.Scatter(x=wf_df.index, y=wf_df['MAMA'], mode='lines', name='MAMA', line=dict(color='#FF6347')))
-                    # Add trace for FAMA
-                    fig_wf.add_trace(go.Scatter(x=wf_df.index, y=wf_df['FAMA'], mode='lines', name='FAMA', line=dict(color='#4682B4')))
-                    fig_wf.update_layout(
-                        title=dict(text=f"{stock_symbol} Walk-Forward Testing Timeframe", font=dict(color='white')),
-                        xaxis_title=dict(text='Date', font=dict(color='white')),
-                        yaxis_title=dict(text='Price', font=dict(color='white')),
-                        xaxis=dict(tickfont=dict(color='white')),
-                        yaxis=dict(tickfont=dict(color='white')),
-                        plot_bgcolor='#1e1e1e', 
-                        paper_bgcolor='#1e1e1e'
-                    )
-                    st.plotly_chart(fig_wf, use_container_width=True)
+                    with col13:
+                        st.write("Walk-Forward Testing Timeframe")
+                        fig_wf = go.Figure()
+                        # Add trace for walk-forward phase closing price
+                        fig_wf.add_trace(go.Scatter(x=wf_df.index, y=wf_df['Close'], mode='lines', name='Walk-Forward Close Price', line=dict(color='#FF7F50')))
+                        # Add trace for MAMA
+                        fig_wf.add_trace(go.Scatter(x=wf_df.index, y=wf_df['MAMA'], mode='lines', name='MAMA', line=dict(color='#FF6347')))
+                        # Add trace for FAMA
+                        fig_wf.add_trace(go.Scatter(x=wf_df.index, y=wf_df['FAMA'], mode='lines', name='FAMA', line=dict(color='#4682B4')))
+                        fig_wf.update_layout(
+                            title=dict(text=f"{stock_symbol} Walk-Forward Testing Timeframe", font=dict(color='white')),
+                            xaxis_title=dict(text='Date', font=dict(color='white')),
+                            yaxis_title=dict(text='Price', font=dict(color='white')),
+                            xaxis=dict(tickfont=dict(color='white')),
+                            yaxis=dict(tickfont=dict(color='white')),
+                            plot_bgcolor='#1e1e1e', 
+                            paper_bgcolor='#1e1e1e'
+                        )
+                        st.plotly_chart(fig_wf, use_container_width=True)
 
-            except ValueError as e:
-                st.error(f"Calculation error: {e}")
-        else:
-            st.error("No data available for the selected walk-forward testing date range.")
+                except ValueError as e:
+                    st.error(f"Calculation error: {e}")
+            else:
+                st.error("No data available for the selected walk-forward testing date range.")
+        except KeyError as e:
+            st.error(f"Error fetching data for walk-forward testing: {e}")

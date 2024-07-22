@@ -1,0 +1,9 @@
+[server]
+headless = true
+
+[runner]
+magicEnabled = false
+installTracer = false
+
+[theme]
+base="dark"
