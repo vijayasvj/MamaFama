@@ -193,7 +193,7 @@ if stock_symbol:
             st.error(f"Calculation error: {e}")
 
     re, ac = backtest_mama_fama(df, fast_limit, slow_limit)
-    st.write(f"Walk-Forward Testing Return: {re:.2f}%")
+    st.subheader(f"Returns: {re:.2f}%")
 
 # Section for Optimization and Walk-Forward Testing
 st.header("Optimization and Walk-Forward Testing")
@@ -217,8 +217,9 @@ if 'optimal_params' not in st.session_state:
 
 if st.button("Optimize Parameters"):
     # Filter data for the optimization date range
-    opt_df = df[(df.index >= pd.to_datetime(opt_start_date)) & (df.index <= pd.to_datetime(opt_end_date))]
-    
+    opt_df = yf.download(stock_symbol, start=opt_start_date, end=opt_end_date)
+    if not opt_df.empty:
+        opt_df['Close'] = opt_df['Adj Close']
     if not opt_df.empty:
         st.session_state.opt_df = opt_df
         # Bounds for a and b
@@ -268,8 +269,9 @@ if st.session_state.optimal_params is not None:
             wf_df['Close'] = wf_df['Adj Close']
             # Calculate MAMA and FAMA using the given limits
             try:
-                wf_df['MAMA'], wf_df['FAMA'] = calculate_mama_fama(wf_df['Close'].values, fast_limit, slow_limit)
-                wf_return, wf_actions = backtest_mama_fama(wf_df, optimal_a, optimal_b)
+                optimal_a2 = float(f"{optimal_a:.2f}")
+                optimal_b2 = float(f"{optimal_b:.2f}")
+                wf_return, wf_actions = backtest_mama_fama(wf_df, optimal_a2, optimal_b2)
                 st.write(f"Walk-Forward Testing Return: {wf_return:.2f}%")
 
                 # Display actions taken during walk-forward testing
@@ -277,7 +279,7 @@ if st.session_state.optimal_params is not None:
                 wf_actions_df = pd.DataFrame({'Date': wf_df.index[:len(wf_actions)], 'Action': wf_actions})
                 wf_actions_csv = wf_actions_df.to_csv(index=False)  # Convert the DataFrame to CSV format
                 st.download_button(label="Download Walk-Forward Actions CSV", data=wf_actions_csv, file_name='walkforward_actions.csv', mime='text/csv')
-
+                wf_df['MAMA'], wf_df['FAMA'] = calculate_mama_fama(wf_df['Close'].values, fast_limit, slow_limit)
                 # Separate columns for the graphs
                 st.subheader("Graphical Representation of Optimization and Walk-Forward Testing")
                 col12, col13 = st.columns(2)

@@ -3,3 +3,4 @@ alpha_vantage
 pandas
 yfinance
 scipy
+plotly
