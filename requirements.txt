@@ -51,7 +51,6 @@ setuptools==69.5.1
 six==1.16.0
 smmap==5.0.1
 soupsieve==2.5
-sqlite==3.45.3
 streamlit==1.36.0
 ta-lib==0.4.32
 tenacity==8.4.2
