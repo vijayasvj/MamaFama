@@ -241,7 +241,6 @@ if st.button("Optimize Parameters"):
 
             # Extract the optimal parameters
             st.session_state.optimal_params = result.x
-
             # Perform backtesting with optimized parameters
             st.session_state.returns, st.session_state.actions = backtest_mama_fama(opt_df, st.session_state.optimal_params[0], st.session_state.optimal_params[1])
         else:
@@ -252,7 +251,7 @@ if st.button("Optimize Parameters"):
 # Walk-Forward Testing Section
 if st.session_state.optimal_params is not None:
     optimal_a, optimal_b = st.session_state.optimal_params
-    st.write(f"Optimal Fast Limit: {optimal_a:.2f}, Optimal Slow Limit: {optimal_b:.2f}")
+    st.write(f"Optimal Fast Limit: {optimal_a}, Optimal Slow Limit: {optimal_b}")
     st.write(f"The profits we have got by buying and selling a single stock is: {st.session_state.returns - 100.00}%")
     actions_df = pd.DataFrame({'Date': st.session_state.opt_df.index[:len(st.session_state.actions)], 'Action': st.session_state.actions})
     actions_csv = actions_df.to_csv(index=False)  # Convert the DataFrame to CSV format
@@ -283,8 +282,8 @@ if st.session_state.optimal_params is not None:
                 wf_df['Close'] = wf_df['Adj Close']
                 # Calculate MAMA and FAMA using the given limits
                 try:
-                    optimal_a2 = float(f"{optimal_a:.2f}")
-                    optimal_b2 = float(f"{optimal_b:.2f}")
+                    optimal_a2 = float(f"{optimal_a}")
+                    optimal_b2 = float(f"{optimal_b}")
                     wf_return, wf_actions = backtest_mama_fama(wf_df, optimal_a2, optimal_b2)
                     st.write(f"Walk-Forward Testing Return: {wf_return - 100.00}%")
 
