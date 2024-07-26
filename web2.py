@@ -1,12 +1,6 @@
 import os
-import subprocess
 import sys
-
-def install_dependencies():
-    if not os.path.exists(os.path.expanduser("~/miniconda")):
-        subprocess.check_call(["bash", "setup.sh"])
-
-install_dependencies()
+sys.path.append('/usr/local/lib/python3.9/site-packages')
 
 import streamlit as st
 import pandas as pd
