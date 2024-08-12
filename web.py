@@ -155,7 +155,7 @@ if page == "Visualise backtesting":
                     st.error(f"Calculation error: {e}")
 
             re, ac = backtest_mama_fama(df, fast_limit, slow_limit)
-            st.subheader(f"Sharp ratio: {re - 1}")
+            st.subheader(f"Backtesting profit percentage: {re - 1}")
         except KeyError as e:
             st.error(f"Error fetching data for {stock_symbol}: {e}")
 
@@ -211,7 +211,7 @@ elif page == "Optimise with Yfinance data":
     if st.session_state.optimal_params is not None:
         optimal_a, optimal_b = st.session_state.optimal_params
         st.write(f"Optimal Fast Limit: {optimal_a}, Optimal Slow Limit: {optimal_b}")
-        st.write(f"Sharp ratio with optimised parameters: {st.session_state.returns - 1}")
+        st.write(f"Backtesting profit percentage with optimised parameters: {st.session_state.returns - 1}")
         actions_df = pd.DataFrame({'Date': st.session_state.opt_df.index[:len(st.session_state.actions)], 'Action': st.session_state.actions})
         actions_csv = actions_df.to_csv(index=False)  # Convert the DataFrame to CSV format
         st.download_button(label="Download Optimized Actions CSV", data=actions_csv, file_name='optimized_actions.csv', mime='text/csv')
@@ -350,7 +350,7 @@ elif page == "Upload CSV and optimise":
                         st.session_state.returns, st.session_state.actions = backtest_mama_fama(opt_df, st.session_state.optimal_params[0], st.session_state.optimal_params[1])
                         
                         st.write(f"Optimal Fast Limit: {st.session_state.optimal_params[0]}, Optimal Slow Limit: {st.session_state.optimal_params[1]}")
-                        st.write(f"Optimization sharp ratio: {st.session_state.returns - 1}")
+                        st.write(f"Optimization Backtesting profit percentage: {st.session_state.returns - 1}")
                         
                         actions_df = pd.DataFrame({'Date': st.session_state.opt_df.index[:len(st.session_state.actions)], 'Action': st.session_state.actions})
                         actions_csv = actions_df.to_csv(index=False)
