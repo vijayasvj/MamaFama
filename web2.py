@@ -1,16 +1,17 @@
 import os
 import sys
-sys.path.append('/usr/local/lib/python3.9/site-packages')
-
 import streamlit as st
 import pandas as pd
 import yfinance as yf
 import plotly.graph_objs as go
 import scipy.optimize as opt
+import talib
+import numpy as np
+
+sys.path.append('/usr/local/lib/python3.9/site-packages')
 
 # Function to calculate MAMA and FAMA using TA-Lib
 def calculate_mama_fama(stock_data, fast_limit, slow_limit):
-    import talib
     # Validate parameters
     if not (0.01 <= fast_limit <= 0.99) or not (0.01 <= slow_limit <= 0.99):
         raise ValueError("fast_limit and slow_limit must be between 0.01 and 0.99")
@@ -154,7 +155,7 @@ if page == "Visualise backtesting":
                     st.error(f"Calculation error: {e}")
 
             re, ac = backtest_mama_fama(df, fast_limit, slow_limit)
-            st.subheader(f"Returns: {re}%")
+            st.subheader(f"Sharp ratio: {re - 1}")
         except KeyError as e:
             st.error(f"Error fetching data for {stock_symbol}: {e}")
 
@@ -210,7 +211,7 @@ elif page == "Optimise with Yfinance data":
     if st.session_state.optimal_params is not None:
         optimal_a, optimal_b = st.session_state.optimal_params
         st.write(f"Optimal Fast Limit: {optimal_a}, Optimal Slow Limit: {optimal_b}")
-        st.write(f"The profits we have got by buying and selling a single stock is: {st.session_state.returns}%")
+        st.write(f"Sharp ratio with optimised parameters: {st.session_state.returns - 1}")
         actions_df = pd.DataFrame({'Date': st.session_state.opt_df.index[:len(st.session_state.actions)], 'Action': st.session_state.actions})
         actions_csv = actions_df.to_csv(index=False)  # Convert the DataFrame to CSV format
         st.download_button(label="Download Optimized Actions CSV", data=actions_csv, file_name='optimized_actions.csv', mime='text/csv')
@@ -235,7 +236,7 @@ elif page == "Optimise with Yfinance data":
         # Button to perform walk-forward testing
         if st.button("Perform Walk-Forward Testing"):
             try:
-                wf_df = yf.download(stock_symbol, start=pd.to_datetime(wf_start_date), end=pd.to_datetime(wf_end_date))
+                wf_df = yf.download(stock_symbol, start=wf_start_date, end=wf_end_date)
                 if not wf_df.empty:
                     wf_df['Close'] = wf_df['Adj Close']
                     # Calculate MAMA and FAMA using the given limits
@@ -243,7 +244,7 @@ elif page == "Optimise with Yfinance data":
                         optimal_a2 = float(f"{optimal_a}")
                         optimal_b2 = float(f"{optimal_b}")
                         wf_return, wf_actions = backtest_mama_fama(wf_df, optimal_a2, optimal_b2)
-                        st.write(f"Walk-Forward Testing Return: {wf_return}%")
+                        st.write(f"Walk-Forward profit percenatge: {wf_return}%")
 
                         # Display actions taken during walk-forward testing
                         st.write("Actions taken during Walk-Forward Testing:")
@@ -321,12 +322,12 @@ elif page == "Upload CSV and optimise":
             col1, col2 = st.columns(2)
             
             with col1:
-                opt_start_date = st.date_input("Optimization Start Date", value=df.index.min())
+                opt_start_date = st.date_input("Optimization Start Date", value=pd.Timestamp(df.index.min()).date())
                 
             with col2:
-                opt_end_date = st.date_input("Optimization End Date", value=df.index.min() + pd.DateOffset(years=1))
+                opt_end_date = st.date_input("Optimization End Date", value=(pd.Timestamp(df.index.min()) + pd.DateOffset(years=1)).date())
                 
-            if opt_start_date < df.index.min() or opt_end_date > df.index.max():
+            if opt_start_date < df.index.min().date() or opt_end_date > df.index.max().date():
                 st.error("The specified date range is not present in the CSV.")
             else:
                 st.subheader("Optimize MAMA and FAMA Parameters")
@@ -337,7 +338,7 @@ elif page == "Upload CSV and optimise":
                     st.session_state.actions = []
                 
                 if st.button("Optimize Parameters"):
-                    opt_df = df[(df.index >= opt_start_date) & (df.index <= opt_end_date)]
+                    opt_df = df[(df.index >= pd.Timestamp(opt_start_date)) & (df.index <= pd.Timestamp(opt_end_date))]
                     
                     if not opt_df.empty:
                         st.session_state.opt_df = opt_df
@@ -349,7 +350,7 @@ elif page == "Upload CSV and optimise":
                         st.session_state.returns, st.session_state.actions = backtest_mama_fama(opt_df, st.session_state.optimal_params[0], st.session_state.optimal_params[1])
                         
                         st.write(f"Optimal Fast Limit: {st.session_state.optimal_params[0]}, Optimal Slow Limit: {st.session_state.optimal_params[1]}")
-                        st.write(f"Optimization Return: {st.session_state.returns}%")
+                        st.write(f"Optimization sharp ratio: {st.session_state.returns - 1}")
                         
                         actions_df = pd.DataFrame({'Date': st.session_state.opt_df.index[:len(st.session_state.actions)], 'Action': st.session_state.actions})
                         actions_csv = actions_df.to_csv(index=False)
@@ -360,20 +361,20 @@ elif page == "Upload CSV and optimise":
                     col3, col4 = st.columns(2)
                     
                     with col3:
-                        wf_start_date = st.date_input("Walk-Forward Start Date", value=opt_end_date + pd.DateOffset(days=1))
+                        wf_start_date = st.date_input("Walk-Forward Start Date", value=(opt_end_date + pd.DateOffset(days=1)).date())
                         
                     with col4:
-                        wf_end_date = st.date_input("Walk-Forward End Date", value=wf_start_date + pd.DateOffset(years=1))
+                        wf_end_date = st.date_input("Walk-Forward End Date", value=(wf_start_date + pd.DateOffset(years=1)).date())
                         
-                    if wf_start_date < df.index.min() or wf_end_date > df.index.max():
+                    if wf_start_date < df.index.min().date() or wf_end_date > df.index.max().date():
                         st.error("The specified date range is not present in the CSV.")
                     else:
                         if st.button("Perform Walk-Forward Testing"):
-                            wf_df = df[(df.index >= wf_start_date) & (df.index <= wf_end_date)]
+                            wf_df = df[(df.index >= pd.Timestamp(wf_start_date)) & (df.index <= pd.Timestamp(wf_end_date))]
                             
                             if not wf_df.empty:
                                 wf_return, wf_actions = backtest_mama_fama(wf_df, st.session_state.optimal_params[0], st.session_state.optimal_params[1])
-                                st.write(f"Walk-Forward Testing Return: {wf_return}%")
+                                st.write(f"Walk-Forward profit percentage: {wf_return - 1}")
                                 
                                 wf_actions_df = pd.DataFrame({'Date': wf_df.index[:len(wf_actions)], 'Action': wf_actions})
                                 wf_actions_csv = wf_actions_df.to_csv(index=False)
